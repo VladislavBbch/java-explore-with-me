@@ -1,8 +1,9 @@
-package ru.practicum.ewm.stats.server.controller.dto;
+package ru.practicum.ewm.stats.server.service;
 
 import org.springframework.stereotype.Component;
 
 import ru.practicum.ewm.stats.dto.StatisticRequestDto;
+import ru.practicum.ewm.stats.dto.StatisticResponseDto;
 import ru.practicum.ewm.stats.server.model.Hit;
 import ru.practicum.ewm.stats.server.model.StatisticInfo;
 

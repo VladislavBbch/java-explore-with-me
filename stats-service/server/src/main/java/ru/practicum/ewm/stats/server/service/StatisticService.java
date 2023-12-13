@@ -3,8 +3,7 @@ package ru.practicum.ewm.stats.server.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.stats.dto.StatisticRequestDto;
-import ru.practicum.ewm.stats.server.controller.dto.StatisticMapper;
-import ru.practicum.ewm.stats.server.controller.dto.StatisticResponseDto;
+import ru.practicum.ewm.stats.dto.StatisticResponseDto;
 import ru.practicum.ewm.stats.server.repository.StatisticRepository;
 
 import javax.validation.ValidationException;
