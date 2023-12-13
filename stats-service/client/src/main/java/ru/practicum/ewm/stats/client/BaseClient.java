@@ -1,9 +1,10 @@
 package ru.practicum.ewm.stats.client;
 
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
-import org.springframework.lang.Nullable;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import ru.practicum.ewm.stats.dto.StatisticResponseDto;
 
 import java.net.URI;
 import java.util.List;
@@ -15,24 +16,27 @@ public class BaseClient {
         this.rest = rest;
     }
 
-    protected ResponseEntity<Object> get(URI url) {
-        return makeAndSendRequest(url, HttpMethod.GET, null);
-    }
-
     protected <T> ResponseEntity<Object> post(URI url, T body) {
-        return makeAndSendRequest(url, HttpMethod.POST, body);
-    }
-
-    private <T> ResponseEntity<Object> makeAndSendRequest(URI url, HttpMethod method, @Nullable T body) {
         HttpEntity<T> requestEntity = new HttpEntity<>(body, defaultHeaders());
 
         ResponseEntity<Object> statisticServerResponse;
         try {
-            statisticServerResponse = rest.exchange(url, method, requestEntity, Object.class);
+            statisticServerResponse = rest.exchange(url, HttpMethod.POST, requestEntity, Object.class);
         } catch (HttpStatusCodeException e) {
             return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsByteArray());
         }
         return prepareGatewayResponse(statisticServerResponse);
+    }
+
+    protected ResponseEntity<List<StatisticResponseDto>> getStatistics(URI url) {
+        HttpEntity<ResponseEntity<Object>> requestEntity = new HttpEntity<>(null, defaultHeaders());
+
+        try {
+            return rest.exchange(url, HttpMethod.GET, requestEntity, new ParameterizedTypeReference<>() {
+            });
+        } catch (HttpStatusCodeException e) {
+            throw new RuntimeException("Ошибка сервиса статистики. Код: " + e.getStatusCode() + " Сообщение: " + e.getResponseBodyAsString());
+        }
     }
 
     private HttpHeaders defaultHeaders() {

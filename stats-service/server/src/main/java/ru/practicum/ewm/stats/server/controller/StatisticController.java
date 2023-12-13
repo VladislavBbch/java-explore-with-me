@@ -3,9 +3,10 @@ package ru.practicum.ewm.stats.server.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.stats.dto.StatisticRequestDto;
-import ru.practicum.ewm.stats.server.controller.dto.StatisticResponseDto;
+import ru.practicum.ewm.stats.dto.StatisticResponseDto;
 import ru.practicum.ewm.stats.server.service.StatisticService;
 
 import javax.validation.Valid;
@@ -18,8 +19,10 @@ import java.util.List;
 @Slf4j
 public class StatisticController {
     private final StatisticService statisticService;
+    private static final String PATTERN = "yyyy-MM-dd HH:mm:ss";
 
     @PostMapping("/hit")
+    @ResponseStatus(HttpStatus.CREATED)
     public void createHit(@RequestBody @Valid StatisticRequestDto requestDto) {
         log.info("Начало обработки запроса на добавление записи в статистику");
         statisticService.createHit(requestDto);
@@ -28,8 +31,8 @@ public class StatisticController {
 
     @GetMapping("/stats")
     public List<StatisticResponseDto> getStatistics(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime start,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime end,
+            @RequestParam @DateTimeFormat(pattern = PATTERN) LocalDateTime start,
+            @RequestParam @DateTimeFormat(pattern = PATTERN) LocalDateTime end,
             @RequestParam(defaultValue = "") String[] uris,
             @RequestParam(defaultValue = "false") Boolean unique) {
         log.info("Начало обработки запроса на получение статистики" + (unique ? " от уникальных пользователей" : "") +
