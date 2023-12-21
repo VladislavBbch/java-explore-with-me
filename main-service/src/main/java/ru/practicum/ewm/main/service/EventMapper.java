@@ -34,14 +34,10 @@ public class EventMapper {
     }
 
     public EventResponseDto toEventDto(Event event) {
-        return toEventDto(event, null);
+        return toEventDto(event, null, null, null);
     }
 
-    public EventResponseDto toEventDto(Event event, Integer confirmedRequestsCount) {
-        return toEventDto(event, confirmedRequestsCount, null);
-    }
-
-    public EventResponseDto toEventDto(Event event, Integer confirmedRequestsCount, Integer views) {
+    public EventResponseDto toEventDto(Event event, Integer confirmedRequestsCount, Integer views, Double rating) {
         return EventResponseDto.builder()
                 .id(event.getId())
                 .annotation(event.getAnnotation())
@@ -61,21 +57,24 @@ public class EventMapper {
                 .publishedOn(event.getPublishedOn())
                 .confirmedRequests(confirmedRequestsCount)
                 .views(views)
+                .rating(rating)
                 .build();
     }
 
     public List<EventResponseDto> toEventDto(List<Event> events,
                                              Map<Long, Integer> requestsCountByEventId,
-                                             Map<Long, Integer> viewsByEventId) {
+                                             Map<Long, Integer> viewsByEventId,
+                                             Map<Long, Double> ratingsByEventId) {
         return events.stream()
                 .map(event -> toEventDto(
                         event,
                         requestsCountByEventId.getOrDefault(event.getId(), 0),
-                        viewsByEventId.getOrDefault(event.getId(), 0)))
+                        viewsByEventId.getOrDefault(event.getId(), 0),
+                        ratingsByEventId.getOrDefault(event.getId(), 0.0)))
                 .collect(Collectors.toList());
     }
 
-    public EventShortResponseDto toEventShortDto(Event event, Integer confirmedRequestsCount, Integer views) {
+    public EventShortResponseDto toEventShortDto(Event event, Integer confirmedRequestsCount, Integer views, Double rating) {
         return EventShortResponseDto.builder()
                 .id(event.getId())
                 .annotation(event.getAnnotation())
@@ -86,24 +85,28 @@ public class EventMapper {
                 .initiator(userMapper.toUserShortDto(event.getInitiator()))
                 .confirmedRequests(confirmedRequestsCount)
                 .views(views)
+                .rating(rating)
                 .build();
     }
 
     public List<EventShortResponseDto> toEventShortDto(List<Event> events,
                                                        Map<Long, Integer> requestsCountByEventId,
-                                                       Map<Long, Integer> viewsByEventId) {
-        return toEventShortDto(events, requestsCountByEventId, viewsByEventId, false);
+                                                       Map<Long, Integer> viewsByEventId,
+                                                       Map<Long, Double> ratingsByEventId) {
+        return toEventShortDto(events, requestsCountByEventId, viewsByEventId, ratingsByEventId, false);
     }
 
     public List<EventShortResponseDto> toEventShortDto(List<Event> events,
                                                        Map<Long, Integer> requestsCountByEventId,
                                                        Map<Long, Integer> viewsByEventId,
+                                                       Map<Long, Double> ratingsByEventId,
                                                        Boolean sortByViews) {
         List<EventShortResponseDto> result = events.stream()
                 .map(event -> toEventShortDto(
                         event,
                         requestsCountByEventId.getOrDefault(event.getId(), 0),
-                        viewsByEventId.getOrDefault(event.getId(), 0)))
+                        viewsByEventId.getOrDefault(event.getId(), 0),
+                        ratingsByEventId.getOrDefault(event.getId(), 0.0)))
                 .collect(Collectors.toList());
         if (sortByViews) {
             result.sort((d1, d2) -> d2.getViews() - d1.getViews());

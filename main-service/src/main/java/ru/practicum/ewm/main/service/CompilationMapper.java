@@ -27,20 +27,23 @@ public class CompilationMapper {
 
     public CompilationResponseDto toCompilationDto(Compilation compilation,
                                                    Map<Long, Integer> requestsCountByEventId,
-                                                   Map<Long, Integer> viewsByEventId) {
+                                                   Map<Long, Integer> viewsByEventId,
+                                                   Map<Long, Double> ratingsByEventId) {
         return CompilationResponseDto.builder()
                 .id(compilation.getId())
                 .pinned(compilation.getIsPinned())
                 .title(compilation.getTitle())
-                .events(eventMapper.toEventShortDto(List.copyOf(compilation.getEvents()), requestsCountByEventId, viewsByEventId))
+                .events(eventMapper.toEventShortDto(
+                        List.copyOf(compilation.getEvents()), requestsCountByEventId, viewsByEventId, ratingsByEventId))
                 .build();
     }
 
     public List<CompilationResponseDto> toCompilationDto(List<Compilation> compilations,
                                                          Map<Long, Integer> requestsCountByEventId,
-                                                         Map<Long, Integer> viewsByEventId) {
+                                                         Map<Long, Integer> viewsByEventId,
+                                                         Map<Long, Double> ratingsByEventId) {
         return compilations.stream()
-                .map(compilation -> toCompilationDto(compilation, requestsCountByEventId, viewsByEventId))
+                .map(compilation -> toCompilationDto(compilation, requestsCountByEventId, viewsByEventId, ratingsByEventId))
                 .collect(Collectors.toList());
     }
 }

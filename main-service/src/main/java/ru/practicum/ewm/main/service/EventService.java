@@ -2,6 +2,7 @@ package ru.practicum.ewm.main.service;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPQLTemplates;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.querydsl.QSort;
@@ -12,6 +13,7 @@ import ru.practicum.ewm.main.exception.ConflictException;
 import ru.practicum.ewm.main.exception.ValidateException;
 import ru.practicum.ewm.main.model.*;
 import ru.practicum.ewm.main.repository.EventRepository;
+import ru.practicum.ewm.main.repository.ReactionRepository;
 import ru.practicum.ewm.main.repository.RequestRepository;
 
 import javax.persistence.EntityManager;
@@ -29,6 +31,7 @@ public class EventService {
     private final EventMapper eventMapper;
     private final RequestRepository requestRepository;
     private final ViewsUtils viewsUtils;
+    private final ReactionRepository reactionRepository;
     private final EntityManager entityManager;
 
     public EventResponseDto createEvent(Long userId, EventRequestDto eventDto) {
@@ -53,7 +56,12 @@ public class EventService {
         List<Long> eventIds = events.stream().map(Event::getId).collect(toList());
         Map<Long, Integer> requestsCountByEventId = requestRepository.getConfirmedRequestsCountByEvents(eventIds);
         Map<Long, Integer> viewsByEventId = viewsUtils.getViewsByEvents(eventIds, events);
-        return eventMapper.toEventShortDto(events, requestsCountByEventId, viewsByEventId);
+        Map<Long, Double> ratingsByEventId = reactionRepository.getEventsRating(eventIds);
+        return eventMapper.toEventShortDto(
+                events,
+                requestsCountByEventId,
+                viewsByEventId,
+                ratingsByEventId);
     }
 
     public List<EventResponseDto> searchEvents(List<Long> userIds,
@@ -85,7 +93,12 @@ public class EventService {
         List<Long> eventIds = events.stream().map(Event::getId).collect(toList());
         Map<Long, Integer> requestsCountByEventId = requestRepository.getConfirmedRequestsCountByEvents(eventIds);
         Map<Long, Integer> viewsByEventId = viewsUtils.getViewsByEvents(eventIds, events);
-        return eventMapper.toEventDto(events, requestsCountByEventId, viewsByEventId);
+        Map<Long, Double> ratingsByEventId = reactionRepository.getEventsRating(eventIds);
+        return eventMapper.toEventDto(
+                events,
+                requestsCountByEventId,
+                viewsByEventId,
+                ratingsByEventId);
     }
 
     public List<EventShortResponseDto> searchPublishedEvents(String text,
@@ -99,79 +112,89 @@ public class EventService {
                                                              Integer size) {
         checkDateRange(rangeStart, rangeEnd);
 
-        BooleanExpression query = QEvent.event.state.eq(EventState.PUBLISHED);
+        BooleanExpression conditions = QEvent.event.state.eq(EventState.PUBLISHED);
         if (text != null) {
-            query = query.and((QEvent.event.annotation.likeIgnoreCase('%' + text + '%'))
+            conditions = conditions.and((QEvent.event.annotation.likeIgnoreCase('%' + text + '%'))
                     .or(QEvent.event.description.likeIgnoreCase('%' + text + '%')));
         }
         if (paid != null) {
-            query = query.and(QEvent.event.isPaid.eq(paid));
+            conditions = conditions.and(QEvent.event.isPaid.eq(paid));
         }
         if (rangeStart == null && rangeEnd == null) {
-            query = query.and((QEvent.event.eventDate.after(LocalDateTime.now())));
+            conditions = conditions.and((QEvent.event.eventDate.after(LocalDateTime.now())));
         } else {
             if (rangeStart != null) {
-                query = query.and(QEvent.event.eventDate.after(rangeStart));
+                conditions = conditions.and(QEvent.event.eventDate.after(rangeStart));
             }
             if (rangeEnd != null) {
-                query = query.and(QEvent.event.eventDate.before(rangeEnd));
+                conditions = conditions.and(QEvent.event.eventDate.before(rangeEnd));
             }
         }
         if (categoryIds.size() > 0) {
-            query = query.and((QEvent.event.category.id.in(categoryIds)));
+            conditions = conditions.and((QEvent.event.category.id.in(categoryIds)));
+        }
+
+        JPAQueryFactory queryFactory = new JPAQueryFactory(JPQLTemplates.DEFAULT, entityManager);
+        JPAQuery<Event> query = queryFactory.selectFrom(QEvent.event);
+        QSort sortOrder;
+        if (sort.equals(EventSortType.REACTIONS)) {
+            sortOrder = new QSort(QEventsRatings.eventsRatings.rating.desc().nullsLast());
+            query = query.leftJoin(QEventsRatings.eventsRatings)
+                    .on(QEvent.event.id.eq(QEventsRatings.eventsRatings.eventId));
+        } else {
+            sortOrder = new QSort(QEvent.event.eventDate.asc());
         }
         List<Event> events;
         if (onlyAvailable) {
-            JPAQueryFactory queryFactory = new JPAQueryFactory(JPQLTemplates.DEFAULT, entityManager);
-            events = queryFactory.selectFrom(QEvent.event)
-                    .leftJoin(QEventsRequests.eventsRequests)
+            query = query.leftJoin(QEventsRequests.eventsRequests)
                     .on(QEvent.event.id.eq(QEventsRequests.eventsRequests.eventId))
                     .where(QEvent.event.participantLimit.eq(0)
                             .or(QEvent.event.participantLimit
-                                    .goe(QEventsRequests.eventsRequests.confirmedRequestCount.coalesce(0))))
-                    .where(query)
-                    .orderBy(QEvent.event.eventDate.asc())
-                    .limit(size)
-                    .offset(from)
-                    .fetch();
-
-        } else {
-            events = eventRepository.findAll(query,
-                    PageRequestByElement.of(from, size, new QSort(QEvent.event.eventDate.asc()))).toList();
+                                    .goe(QEventsRequests.eventsRequests.confirmedRequestCount.coalesce(0))));
         }
+        events = query
+                .where(conditions)
+                .orderBy(sortOrder.getOrderSpecifiers().get(0))
+                .limit(size)
+                .offset(from)
+                .fetch();
         List<Long> eventIds = events.stream().map(Event::getId).collect(toList());
         Map<Long, Integer> requestsCountByEventId = requestRepository.getConfirmedRequestsCountByEvents(eventIds);
         Map<Long, Integer> viewsByEventId = viewsUtils.getViewsByEvents(eventIds, events);
+        Map<Long, Double> ratingsByEventId = reactionRepository.getEventsRating(eventIds);
         return eventMapper.toEventShortDto(
                 events,
                 requestsCountByEventId,
                 viewsByEventId,
+                ratingsByEventId,
                 sort.equals(EventSortType.VIEWS));
     }
 
     public EventResponseDto getEventById(Long userId, Long id) {
-        Event existingEvent = checkEvent(id);
+        Event existingEvent = eventRepository.checkEvent(id);
         if (!Objects.equals(existingEvent.getInitiator().getId(), userId)) {
             throw new ConflictException("Вы не являетесь инициатором события с id: " + id);
         }
         Integer confirmedRequestsCount = requestRepository.getEventConfirmedRequestsCount(id);
         Integer views = viewsUtils.getEventViews(id, existingEvent.getPublishedOn());
-        return eventMapper.toEventDto(existingEvent, confirmedRequestsCount, views);
+        Double rating = reactionRepository.getEventRating(id);
+        return eventMapper.toEventDto(existingEvent, confirmedRequestsCount, views, rating);
     }
 
     public EventResponseDto getPublishedEventById(Long id) {
-        Event event = checkEvent(id);
+        Event event = eventRepository.checkEvent(id);
         Integer confirmedRequestsCount = requestRepository.getEventConfirmedRequestsCount(id);
         Integer views = viewsUtils.getEventViews(id, event.getPublishedOn());
+        Double rating = reactionRepository.getEventRating(id);
         if (event.getState().equals(EventState.PUBLISHED)) {
-            return eventMapper.toEventDto(event, confirmedRequestsCount, views);
+            return eventMapper.toEventDto(event, confirmedRequestsCount, views, rating);
         } else {
             throw new ObjectNotFoundException("Несуществующий id события: " + id);
         }
     }
 
     public EventResponseDto updateEvent(Long userId, Long id, EventUpdateUserRequestDto eventDto) {
-        Event existingEvent = checkEvent(id);
+        Event existingEvent = eventRepository.checkEvent(id);
         if (!Objects.equals(existingEvent.getInitiator().getId(), userId)) {
             throw new ConflictException("Вы не являетесь инициатором события с id: " + id);
         }
@@ -193,11 +216,12 @@ public class EventService {
         Event savedEvent = eventRepository.save(existingEvent);
         Integer confirmedRequestsCount = requestRepository.getEventConfirmedRequestsCount(id);
         Integer views = viewsUtils.getEventViews(id, savedEvent.getPublishedOn());
-        return eventMapper.toEventDto(savedEvent, confirmedRequestsCount, views);
+        Double rating = reactionRepository.getEventRating(id);
+        return eventMapper.toEventDto(savedEvent, confirmedRequestsCount, views, rating);
     }
 
     public EventResponseDto updateEventByAdmin(Long id, EventUpdateAdminRequestDto eventDto) {
-        Event existingEvent = checkEvent(id);
+        Event existingEvent = eventRepository.checkEvent(id);
         checkEventDateForAdmin(eventDto.getEventDate(), existingEvent.getEventDate());
         EventUpdateAdminRequestDto.StateAction action = eventDto.getStateAction();
         if (action != null) {
@@ -220,12 +244,8 @@ public class EventService {
         Event savedEvent = eventRepository.save(existingEvent);
         Integer confirmedRequestsCount = requestRepository.getEventConfirmedRequestsCount(id);
         Integer views = viewsUtils.getEventViews(id, savedEvent.getPublishedOn());
-        return eventMapper.toEventDto(savedEvent, confirmedRequestsCount, views);
-    }
-
-    private Event checkEvent(Long id) {
-        return eventRepository.findById(id)
-                .orElseThrow(() -> new ObjectNotFoundException("Несуществующий id события: " + id));
+        Double rating = reactionRepository.getEventRating(id);
+        return eventMapper.toEventDto(savedEvent, confirmedRequestsCount, views, rating);
     }
 
     private void checkEventDate(LocalDateTime eventDate) {

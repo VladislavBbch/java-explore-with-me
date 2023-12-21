@@ -46,4 +46,6 @@ public class Event {
     private LocalDateTime publishedOn;
     @ManyToMany(mappedBy = "events", fetch = FetchType.LAZY)
     private Set<Compilation> compilations; //not used
+    @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
+    private Set<Reaction> reactions;
 }

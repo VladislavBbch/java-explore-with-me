@@ -25,11 +25,12 @@ public class EventResponseDto {
     private Boolean requestModeration;
     private String title;
     private EventState state;
-    private UserShortDto initiator;
+    private UserShortResponseDto initiator;
     private Integer confirmedRequests;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = PATTERN)
     private LocalDateTime createdOn;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = PATTERN)
     private LocalDateTime publishedOn;
     private Integer views;
+    private Double rating;
 }

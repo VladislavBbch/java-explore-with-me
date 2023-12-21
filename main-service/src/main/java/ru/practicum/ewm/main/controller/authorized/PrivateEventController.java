@@ -9,6 +9,7 @@ import ru.practicum.ewm.main.controller.Create;
 import ru.practicum.ewm.main.controller.Update;
 import ru.practicum.ewm.main.dto.*;
 import ru.practicum.ewm.main.service.EventService;
+import ru.practicum.ewm.main.service.ReactionService;
 import ru.practicum.ewm.main.service.RequestService;
 
 import javax.validation.Valid;
@@ -26,6 +27,7 @@ import static ru.practicum.ewm.main.controller.Constant.AUTHORIZED_URL_PREFIX;
 public class PrivateEventController {
     private final EventService eventService;
     private final RequestService requestService;
+    private final ReactionService reactionService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -83,5 +85,37 @@ public class PrivateEventController {
         EventRequestStatusUpdateResponse request = requestService.updateRequest(userId, eventId, requestDto);
         log.info("Окончание обработки запроса на обновление запроса на участие в событии: {}", eventId);
         return request;
+    }
+
+    @PostMapping("/{eventId}/reactions")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ReactionDto addReaction(@PathVariable Long userId,
+                                   @PathVariable Long eventId,
+                                   @RequestParam Boolean isPositive) {
+        log.info("Начало обработки запроса на добавление {} реакции от пользователя: {} событию: {}",
+                isPositive ? "положительной" : "отрицательной", userId, eventId);
+        ReactionDto reactionDto = reactionService.addReaction(userId, eventId, isPositive);
+        log.info("Окончание обработки запроса на добавление {} реакции от пользователя: {} событию: {}",
+                isPositive ? "положительной" : "отрицательной", userId, eventId);
+        return reactionDto;
+    }
+
+    @PatchMapping("/{eventId}/reactions")
+    public ReactionDto updateReaction(@PathVariable Long userId,
+                                      @PathVariable Long eventId,
+                                      @RequestParam Boolean isPositive) {
+        log.info("Начало обработки запроса на изменение реакции от пользователя: {} событию: {}", userId, eventId);
+        ReactionDto reactionDto = reactionService.updateReaction(userId, eventId, isPositive);
+        log.info("Окончание обработки запроса на изменение реакции от пользователя: {} событию: {}", userId, eventId);
+        return reactionDto;
+    }
+
+    @DeleteMapping("/{eventId}/reactions")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteReaction(@PathVariable Long userId,
+                               @PathVariable Long eventId) {
+        log.info("Начало обработки запроса на удаление реакции от пользователя: {} событию: {}", userId, eventId);
+        reactionService.deleteReaction(userId, eventId);
+        log.info("Окончание обработки запроса на удаление реакции от пользователя: {} событию: {}", userId, eventId);
     }
 }

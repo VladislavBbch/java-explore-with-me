@@ -3,6 +3,7 @@ package ru.practicum.ewm.main.model;
 import lombok.*;
 
 import javax.persistence.*;
+import java.util.Set;
 
 @Entity
 @Table(name = "USERS")
@@ -17,4 +18,6 @@ public class User {
     private Long id;
     private String email;
     private String name;
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private Set<Reaction> reactions;
 }

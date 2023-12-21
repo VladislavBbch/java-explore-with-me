@@ -11,6 +11,7 @@ import ru.practicum.ewm.main.model.Event;
 import ru.practicum.ewm.main.model.QCompilation;
 import ru.practicum.ewm.main.repository.CompilationRepository;
 import ru.practicum.ewm.main.repository.EventRepository;
+import ru.practicum.ewm.main.repository.ReactionRepository;
 import ru.practicum.ewm.main.repository.RequestRepository;
 
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ public class CompilationService {
     private final CompilationMapper compilationMapper;
     private final EventRepository eventRepository;
     private final RequestRepository requestRepository;
+    private final ReactionRepository reactionRepository;
     private final ViewsUtils viewsUtils;
 
     public CompilationResponseDto createCompilation(CompilationRequestDto compilationDto) {
@@ -45,7 +47,8 @@ public class CompilationService {
         return compilationMapper.toCompilationDto(
                 compilationRepository.save(compilation),
                 requestRepository.getConfirmedRequestsCountByEvents(eventIds),
-                viewsUtils.getViewsByEvents(eventIds, events));
+                viewsUtils.getViewsByEvents(eventIds, events),
+                reactionRepository.getEventsRating(eventIds));
     }
 
     public List<CompilationResponseDto> getCompilations(Boolean isPinned, Integer from, Integer size) {
@@ -64,7 +67,8 @@ public class CompilationService {
         return compilationMapper.toCompilationDto(
                 compilations,
                 requestRepository.getConfirmedRequestsCountByEvents(compilationsEventIds),
-                viewsUtils.getViewsByEvents(compilationsEventIds, compilationsEvents));
+                viewsUtils.getViewsByEvents(compilationsEventIds, compilationsEvents),
+                reactionRepository.getEventsRating(compilationsEventIds));
     }
 
     public CompilationResponseDto getCompilationById(Long id) {
@@ -73,7 +77,8 @@ public class CompilationService {
         return compilationMapper.toCompilationDto(
                 compilation,
                 requestRepository.getConfirmedRequestsCountByEvents(eventIds),
-                viewsUtils.getViewsByEvents(eventIds, compilation.getEvents()));
+                viewsUtils.getViewsByEvents(eventIds, compilation.getEvents()),
+                reactionRepository.getEventsRating(eventIds));
     }
 
     public CompilationResponseDto updateCompilation(Long id, CompilationRequestDto compilationDto) {
@@ -98,7 +103,8 @@ public class CompilationService {
         return compilationMapper.toCompilationDto(
                 compilationRepository.save(existingCompilation),
                 requestRepository.getConfirmedRequestsCountByEvents(eventIds),
-                viewsUtils.getViewsByEvents(eventIds, events));
+                viewsUtils.getViewsByEvents(eventIds, events),
+                reactionRepository.getEventsRating(eventIds));
     }
 
     public void deleteCompilation(Long id) {

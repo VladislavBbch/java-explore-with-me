@@ -72,12 +72,3 @@ CREATE TABLE IF NOT EXISTS REACTIONS
     IS_POSITIVE BOOLEAN NOT NULL,
     CONSTRAINT reactions_pk PRIMARY KEY (USER_ID, EVENT_ID)
 );
-
-CREATE OR REPLACE FUNCTION wilson(positive BIGINT, negative BIGINT) RETURNS DECIMAL AS
-'
-    BEGIN
-        RETURN ROUND(((positive + 1.9208) / (positive + negative) -
-                      1.96 * SQRT((positive * negative) / (positive + negative) + 0.9604) /
-                      (positive + negative)) / (1 + 3.8416 / (positive + negative)), 2);
-    END;
-' LANGUAGE plpgsql;

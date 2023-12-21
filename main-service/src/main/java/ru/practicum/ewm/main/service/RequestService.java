@@ -28,7 +28,7 @@ public class RequestService {
 
     public RequestDto createRequest(Long userId, Long eventId) {
         User user = userRepository.checkUser(userId);
-        Event event = checkEvent(eventId);
+        Event event = eventRepository.checkEvent(eventId);
         if (Objects.equals(userId, event.getInitiator().getId())) {
             throw new ConflictException("Нельзя создать запрос на участие, т.к. вы являетесь инициатором события с id: " + eventId);
         }
@@ -71,7 +71,7 @@ public class RequestService {
 
     public List<RequestDto> getRequestsByEventId(Long userId, Long eventId) {
         userRepository.checkUser(userId);
-        checkEvent(eventId);
+        eventRepository.checkEvent(eventId);
         return requestMapper.toRequestDto(
                 requestRepository.findAllByEventId(eventId));
     }
@@ -79,7 +79,7 @@ public class RequestService {
     @Transactional
     public EventRequestStatusUpdateResponse updateRequest(Long userId, Long eventId, EventRequestStatusUpdateRequest requestDto) {
         userRepository.checkUser(userId);
-        Event event = checkEvent(eventId);
+        Event event = eventRepository.checkEvent(eventId);
         int availableParticipantCount = checkEventParticipantLimit(event);
         List<Request> requests = requestRepository.findAllById(requestDto.getRequestIds());
         if (!event.getIsRequestModerationRequired() || event.getParticipantLimit() == 0) {
@@ -125,11 +125,6 @@ public class RequestService {
     private Request checkRequest(Long id) {
         return requestRepository.findById(id)
                 .orElseThrow(() -> new ObjectNotFoundException("Несуществующий id запроса на участие: " + id));
-    }
-
-    private Event checkEvent(Long id) {
-        return eventRepository.findById(id)
-                .orElseThrow(() -> new ObjectNotFoundException("Несуществующий id события: " + id));
     }
 
     private int checkEventParticipantLimit(Event event) {

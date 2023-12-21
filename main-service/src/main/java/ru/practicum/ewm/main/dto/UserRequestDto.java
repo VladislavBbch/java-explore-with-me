@@ -9,8 +9,7 @@ import javax.validation.constraints.Size;
 
 @Data
 @Builder(toBuilder = true)
-public class UserDto {
-    private Long id;
+public class UserRequestDto {
     @NotBlank
     @Size(min = 6, max = 254)
     @Email

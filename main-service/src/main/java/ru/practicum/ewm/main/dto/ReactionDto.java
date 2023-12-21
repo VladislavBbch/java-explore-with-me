@@ -5,7 +5,8 @@ import lombok.Data;
 
 @Data
 @Builder(toBuilder = true)
-public class UserShortDto {
-    private Long id;
-    private String name;
+public class ReactionDto {
+    private Long userId;
+    private Long eventId;
+    private Boolean isPositive;
 }
