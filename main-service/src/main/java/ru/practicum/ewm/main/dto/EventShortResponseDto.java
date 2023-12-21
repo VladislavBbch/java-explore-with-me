@@ -18,7 +18,8 @@ public class EventShortResponseDto {
     private LocalDateTime eventDate;
     private Boolean paid;
     private String title;
-    private UserShortDto initiator;
+    private UserShortResponseDto initiator;
     private Integer confirmedRequests;
     private Integer views;
+    private Double rating;
 }
